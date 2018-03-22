@@ -179,8 +179,8 @@ class ACNet(object):
             # l_a = tf.layers.dense(l_a3, self.para.units_a, tf.nn.relu6, kernel_initializer=w_init, name='la')
 
             mu = tf.layers.dense(l_a1, self.para.N_A, tf.nn.tanh, kernel_initializer=w_init, name='mu')
-            sigma_1 = tf.layers.dense(l_a1, self.para.N_A, tf.sigmoid, kernel_initializer=w_init, name='sigma')
-            # sigma_1 = tf.layers.dense(l_a1, self.para.N_A, tf.nn.softplus, kernel_initializer=w_init, name='sigma')
+            # sigma_1 = tf.layers.dense(l_a1, self.para.N_A, tf.sigmoid, kernel_initializer=w_init, name='sigma')
+            sigma_1 = tf.layers.dense(l_a1, self.para.N_A, tf.nn.softplus, kernel_initializer=w_init, name='sigma')
             sigma = tf.multiply(sigma_1, self.para.sigma_mul, name='scaled_a')
 
         with tf.variable_scope('critic'):
@@ -230,17 +230,17 @@ class Worker(object):
             ep_a = []
             ep_a_best = []
             for ep_t in range(self.para.MAX_EP_STEP):  # MAX_EP_STEP每个片段的最大个数
-                # if self.name == 'W_0':
-                #     self.env_l.render()
+                if self.name == 'W_0':
+                    self.env_l.render()
                 a = self.AC.choose_action(s)  # 选取动作
                 a_best = self.AC.choose_best(s)  # 选取动作
                 s_, r, done, info = self.env_l.step(a)
-                done = True if ep_t == self.para.MAX_EP_STEP - 1 else False
+                # done = True if ep_t == self.para.MAX_EP_STEP - 1 else False
 
                 ep_r += r
                 buffer_s.append(s)
                 buffer_a.append(a)
-                buffer_r.append((r+8)/8)  # normalize
+                buffer_r.append(r)  # normalize
                 ep_a.append(a)
                 ep_a_best.append(a_best)
 

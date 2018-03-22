@@ -1,2 +1,2 @@
-model_checkpoint_path: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\3 A3C_con\\Pendulum-v0\\A3C_Net\\data.chkp"
-all_model_checkpoint_paths: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\3 A3C_con\\Pendulum-v0\\A3C_Net\\data.chkp"
+model_checkpoint_path: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\3 A3C_con\\1 Pendulum-v0\\A3C_Net\\data.chkp"
+all_model_checkpoint_paths: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\3 A3C_con\\1 Pendulum-v0\\A3C_Net\\data.chkp"
