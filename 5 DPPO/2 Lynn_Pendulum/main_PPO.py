@@ -19,7 +19,7 @@ METHOD = [
 env = gym.make('Pendulum-v0').unwrapped
 
 train_flag = True
-train_flag = False
+# train_flag = False
 RLmethod = PPO(
     method=METHOD,
     LR_A=0.0001,
@@ -28,6 +28,7 @@ RLmethod = PPO(
     C_UPDATE_STEPS=10,
     ob_dim=3,
     a_dim=1,
+    tensorboard=True,
     train=train_flag  # 训练的时候有探索
     )
 
