@@ -6,7 +6,6 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ## import env
 env = gym.make('Pendulum-v0')
 state_dim = env.observation_space.shape[0]
@@ -18,7 +17,7 @@ print('state_dim', state_dim, 'action_dim', action_dim, 'a_bound', a_bound)
 
 ## train
 train_flag = True
-# train_flag = False
+train_flag = False
 para = Para(EP_MAX=1000,
             EP_LEN=200,
             N_WORKER=8,  # parallel workers
@@ -28,7 +27,8 @@ para = Para(EP_MAX=1000,
             MIN_BATCH_SIZE=64,  # minimum batch size for updating PPO
             UPDATE_STEP=10,  # loop update operation n-steps
             EPSILON=0.2,  # for clipping surrogate objective
-            GAME='Pendulum-v0',
+            units_a=200,
+            units_c=100,
             S_DIM=3,
             A_DIM=1,  # state and action dimension)
             tensorboard=True,
@@ -45,7 +45,7 @@ else:
         for t in range(300):
             env.render()
             action = RLmethod.GLOBAL_PPO.choose_action(s)
-            s_, r, done, _ = env.step(action)
+            s_, r, done, _ = env.step(action*2)
             s = s_
 
 

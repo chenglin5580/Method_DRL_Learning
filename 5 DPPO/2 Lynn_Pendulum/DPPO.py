@@ -30,7 +30,8 @@ class Para(object):
                  MIN_BATCH_SIZE=64,  # minimum batch size for updating PPO
                  UPDATE_STEP=10,  # loop update operation n-steps
                  EPSILON=0.2,  # for clipping surrogate objective
-                 GAME='Pendulum-v0',
+                 units_a=200,
+                 units_c=200,
                  S_DIM=3,
                  A_DIM=1,  # state and action dimension
                  tensorboard=True,
@@ -45,7 +46,9 @@ class Para(object):
         self.MIN_BATCH_SIZE = MIN_BATCH_SIZE  # minimum batch size for updating PPO
         self.UPDATE_STEP = UPDATE_STEP  # loop update operation n-steps
         self.EPSILON = EPSILON  # for clipping surrogate objective
-        self.GAME = GAME
+        self.GAME = 'Pendulum-v0'
+        self.units_a=units_a
+        self.units_c=units_c
         self.S_DIM = S_DIM
         self.A_DIM = A_DIM  # state and action dimension
         self.train = train
@@ -118,8 +121,8 @@ class ACnet(object):
 
         # actor definition, loss, and train
         with tf.variable_scope('actor'): # actor definition
-            pi, pi_params, self.mu, sigma = self._build_anet('actor', 'pi', trainable=True)
-            oldpi, oldpi_params, oldmu, oldsigma = self._build_anet('actor', 'oldpi', trainable=False)
+            pi, pi_params, self.mu, sigma = self._build_anet(self.tfs, 'actor', 'pi', trainable=True)
+            oldpi, oldpi_params, oldmu, oldsigma = self._build_anet(self.tfs, 'actor', 'oldpi', trainable=False)
             self.sample_op = tf.squeeze(pi.sample(1), axis=0)  # operation of choosing action
             self.update_oldpi_op = [oldp.assign(p) for p, oldp in zip(pi_params, oldpi_params)]
         with tf.variable_scope('a_loss'):    # actor loss
@@ -161,10 +164,26 @@ class ACnet(object):
                 self.para.GLOBAL_UPDATE_COUNTER = 0  # reset counter
                 self.para.ROLLING_EVENT.set()  # set roll-out available
 
-    def _build_anet(self, scope, name, trainable):
+    def _build_anet(self, s, scope, name, trainable):
+        w_init = tf.random_normal_initializer(0., .1)
         with tf.variable_scope(name):
-            l1 = tf.layers.dense(self.tfs, 200, tf.nn.relu, trainable=trainable)
-            mu = 2 * tf.layers.dense(l1, self.para.A_DIM, tf.nn.tanh, trainable=trainable)
+            n_l1 = self.para.units_a
+            # net0 = tf.layers.dense(s, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l0',
+            #                        trainable=trainable)
+            # net1 = tf.layers.dense(net0, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l1',
+            #                        trainable=trainable)
+            # net2 = tf.layers.dense(net1, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l2',
+            #                        trainable=trainable)
+            # net3 = tf.layers.dense(net2, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l3',
+            #                        trainable=trainable)
+            # mu = tf.layers.dense(net3, self.para.A_DIM, activation=tf.nn.tanh, kernel_initializer=w_init, name='mu',
+            #                      trainable=trainable)
+            # # sigma_1 = tf.layers.dense(net1, self.a_dim, activation=tf.sigmoid, name='sigma_1', trainable=trainable)
+            # sigma_1 = tf.layers.dense(net3, self.para.A_DIM, activation=tf.nn.softplus, kernel_initializer=w_init,
+            #                           name='sigma_1', trainable=trainable)
+            # sigma = tf.multiply(sigma_1, 0.3, name='sigma')
+            l1 = tf.layers.dense(self.tfs, n_l1, tf.nn.relu, trainable=trainable)
+            mu = tf.layers.dense(l1, self.para.A_DIM, tf.nn.tanh, trainable=trainable)
             sigma = tf.layers.dense(l1, self.para.A_DIM, tf.nn.softplus, trainable=trainable)
             norm_dist = tf.distributions.Normal(loc=mu, scale=sigma)
         params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope+'/'+name)
@@ -172,8 +191,19 @@ class ACnet(object):
 
     def _build_vnet(self, s, scope, trainable):
         # 建立critic网络
+        w_init = tf.random_normal_initializer(0., .1)
         with tf.variable_scope(scope):
-            l1 = tf.layers.dense(s, 100, tf.nn.relu, trainable=trainable)
+            n_l1 = self.para.units_c
+            # net0 = tf.layers.dense(s, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l0',
+            #                        trainable=trainable)
+            # net1 = tf.layers.dense(net0, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l1',
+            #                        trainable=trainable)
+            # net2 = tf.layers.dense(net1, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l2',
+            #                        trainable=trainable)
+            # net3 = tf.layers.dense(net2, n_l1, activation=tf.nn.relu, kernel_initializer=w_init, name='l3',
+            #                        trainable=trainable)
+            # v = tf.layers.dense(net3, 1, trainable=trainable)  # Q(s,a)
+            l1 = tf.layers.dense(s, n_l1, tf.nn.relu, trainable=trainable)
             v = tf.layers.dense(l1, 1)
         return v
 
@@ -181,10 +211,10 @@ class ACnet(object):
         s = s[np.newaxis, :]
         if self.para.train:
             a = self.sess.run(self.sample_op, {self.tfs: s})[0]
-            return np.clip(a, -2, 2)
+            return np.clip(a, -1, 1)
         else:
             a = self.sess.run(self.mu, {self.tfs: s})[0]
-            return np.clip(a, -2, 2)
+            return np.clip(a, -1, 1)
 
     def net_save(self):
         self.actor_saver.save(self.sess, self.para.model_path)
@@ -214,7 +244,7 @@ class Worker(object):
                     self.para.ROLLING_EVENT.wait()  # wait until PPO is updated
                     buffer_s, buffer_a, buffer_r = [], [], []  # clear history buffer, use new policy to collect data
                 a = self.ppo.choose_action(s)
-                s_, r, done, _ = self.env.step(a)
+                s_, r, done, _ = self.env.step(a*2)
                 buffer_s.append(s)
                 buffer_a.append(a)
                 buffer_r.append((r + 8) / 8)  # normalize reward, find to be useful
