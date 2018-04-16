@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\2 DDPG\\2 MountainCarContinuous-V0\\DDPG_Net\\data.chkp"
+all_model_checkpoint_paths: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\2 DDPG\\2 MountainCarContinuous-V0\\DDPG_Net\\data.chkp"

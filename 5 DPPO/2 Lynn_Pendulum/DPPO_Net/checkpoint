@@ -1,0 +1,2 @@
+model_checkpoint_path: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\5 DPPO\\2 Lynn_Pendulum\\DPPO_Net\\data.chkp"
+all_model_checkpoint_paths: "C:\\Users\\cheng\\PycharmProjects\\Method_DRL_Learning\\5 DPPO\\2 Lynn_Pendulum\\DPPO_Net\\data.chkp"
