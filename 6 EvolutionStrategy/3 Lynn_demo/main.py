@@ -13,11 +13,17 @@ import time
 
 class ES(object):
 
-    def __init__(self, CONFIG):
-        self.N_KID = 10  # half of the training population
-        self.N_GENERATION = 5000  # training step
-        self.LR = .05  # learning rate
-        self.SIGMA = .05  # mutation strength or step size
+    def __init__(self,
+                 CONFIG,
+                 N_KID=10,
+                 N_GENERATION=5000,
+                 LR=.05,
+                 SIGMA=.05,
+                 ):
+        self.N_KID = N_KID  # half of the training population
+        self.N_GENERATION = N_GENERATION  # training step
+        self.LR = LR  # learning rate
+        self.SIGMA = SIGMA  # mutation strength or step size
         self.N_CORE = mp.cpu_count() - 1
         self.CONFIG = CONFIG
         self.utility = self.get_utility(self.N_KID)
@@ -163,11 +169,16 @@ if __name__ == "__main__":
 
     env = gym.make(CONFIG['game']).unwrapped
 
-    RLmethod = ES(CONFIG=CONFIG)
+    RLmethod = ES(CONFIG=CONFIG,
+                  N_KID=10,
+                  N_GENERATION=5000,
+                  LR=.05,
+                  SIGMA=.05
+                  )
 
     ## train
     train_flag = True
-    train_flag = False
+    # train_flag = False
     if train_flag:
         RLmethod.run()
     else:
