@@ -81,7 +81,7 @@ class WW(object):
             if env.spec._env_name == 'MountainCar' and s[0] > -0.1: r = 0.
             ep_r += r
             if done: break
-        return ep_r
+        return -ep_r
 
     def get_action(self, params, x, continuous_a):
         x = x[np.newaxis, :]
@@ -176,7 +176,7 @@ class WW(object):
                 if done: break
 
     def get_utility(self, N_KID):
-        base = N_KID * 2  # *2 for mirrored sampling
+        base = N_KID  # *2 for mirrored sampling
         rank = np.arange(1, base + 1)
         util_ = np.maximum(0, np.log(base / 2 + 1) - np.log(rank))
         utility = util_ / util_.sum() - 1 / base  # 根据排名选择更新力度
