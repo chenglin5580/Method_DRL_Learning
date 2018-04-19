@@ -40,6 +40,7 @@ class WW(object):
             self.Waterweeds_Fit[i] = self.get_reward(net_shapes, waterweed, env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
         self.D = len(waterweed)
         self.net_shapes = net_shapes
+        self.optimizer = SGD(waterweed, 0.05)
         self.Waterweeds_sort = np.argsort(self.Waterweeds_Fit)
         self.Waterweeds_life = np.zeros([self.Num_WW])
         index_best = self.Waterweeds_sort[0]
@@ -63,7 +64,7 @@ class WW(object):
         fFitness = np.zeros([self.Num_WW], dtype=np.int32)
         for kk in range(self.Num_WW):
             fFitness[kk] = self.MNum_seeds - (kk - 1) * (self.MNum_seeds - 1) / (self.Num_WW - 1)
-            fFitness[kk] = np.fix(fFitness[kk] + 0.49999999)
+            fFitness[kk] = np.fix(fFitness[kk] + 5.49999999)
         return fFitness
 
 
@@ -80,7 +81,7 @@ class WW(object):
             if env.spec._env_name == 'MountainCar' and s[0] > -0.1: r = 0.
             ep_r += r
             if done: break
-        return -ep_r
+        return ep_r
 
     def get_action(self, params, x, continuous_a):
         x = x[np.newaxis, :]
@@ -110,7 +111,6 @@ class WW(object):
             # self.limit = 10 + iter / self.maxCycle * 30
 
             for i_step in range(self.Num_WW):
-
                 self.waterweed_update(i_step)
 
             self.Waterweeds_sort = np.argsort(self.Waterweeds_Fit)
@@ -132,8 +132,9 @@ class WW(object):
         i_ww = self.Waterweeds_sort[i_step]
         mother_WW = self.Waterweeds[i_ww]
 
-        seed_fit_strong = None
 
+        seed = []
+        seed_fit = []
         for i_seed in range(self.seed_num[i_step]):
 
             while True:
@@ -142,37 +143,25 @@ class WW(object):
                     break
             father_WW = self.Waterweeds[neighbour]
 
-            seed = mother_WW.copy()
+            temp = mother_WW.copy()
 
-            for Param2Change in range(self.D):
-                if np.random.rand() < 0.1:
-                    seed[Param2Change] += (mother_WW[Param2Change] - father_WW[Param2Change]) * (
-                            np.random.rand() - 0.5) * 2
-                    # if seed[Param2Change] > self.ub[Param2Change]:  seed[Param2Change] = self.ub[Param2Change]
-                    # if seed[Param2Change] < self.lb[Param2Change]:  seed[Param2Change] = self.lb[Param2Change]
+            temp += np.random.randn(mother_WW.size) * 0.05
 
-            if seed_fit_strong == None:
-                seed_strong = seed
-                seed_fit_strong = self.get_reward(self.net_shapes, seed, env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
-            else:
-                seed_fit = self.get_reward(self.net_shapes, seed, env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
-                if seed_fit < seed_fit_strong:
-                    seed_strong = seed
-                    seed_fit_strong = seed_fit
+            seed.append(temp)
+            seed_fit.append(self.get_reward(self.net_shapes, temp, env, CONFIG['ep_max_step'], CONFIG['continuous_a']))
 
-        # 与母水草展开竞争
-        if self.Waterweeds_life[i_ww] < self.limit:
-            if self.Waterweeds_Fit[i_ww] > seed_fit_strong:
-                self.Waterweeds[i_ww] = seed_strong
-                self.Waterweeds_Fit[i_ww] = seed_fit_strong
-                self.Waterweeds_life[i_ww] = 0
-            else:
-                self.Waterweeds_life[i_ww] += 1
+        seed_rank = np.argsort(seed_fit)
+        cumulative_update = np.zeros_like(mother_WW)  # initialize update values
+        utility = self.get_utility(self.seed_num[i_step])
+        for ui, k_id in enumerate(seed_rank):
+            cumulative_update += utility[ui] * (seed[k_id] - mother_WW)
 
-        else:
-            self.Waterweeds[i_ww] = seed_strong
-            self.Waterweeds_Fit[i_ww] = seed_fit_strong
-            self.Waterweeds_life[i_ww] = 0
+        gradients = self.optimizer.get_gradients(cumulative_update / (self.seed_num[i_step]*0.05))
+        self.Waterweeds[i_ww] += gradients
+        self.Waterweeds_Fit[i_ww] = self.get_reward(self.net_shapes, self.Waterweeds[i_ww], env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
+        if i_ww == 1:
+            print('1', self.Waterweeds_Fit[i_ww])
+
 
     def display(self, CONFIG):
         # testnet/
@@ -186,7 +175,22 @@ class WW(object):
                 s, _, done, _ = env.step(a)
                 if done: break
 
+    def get_utility(self, N_KID):
+        base = N_KID * 2  # *2 for mirrored sampling
+        rank = np.arange(1, base + 1)
+        util_ = np.maximum(0, np.log(base / 2 + 1) - np.log(rank))
+        utility = util_ / util_.sum() - 1 / base  # 根据排名选择更新力度
+        return utility
 
+
+class SGD(object):                      # optimizer with momentum
+    def __init__(self, params, learning_rate, momentum=0.9):
+        self.v = np.zeros_like(params).astype(np.float32)
+        self.lr, self.momentum = learning_rate, momentum
+
+    def get_gradients(self, gradients):
+        self.v = self.momentum * self.v + (1. - self.momentum) * gradients
+        return self.lr * self.v
 
 if __name__ == "__main__":
 
@@ -202,13 +206,13 @@ if __name__ == "__main__":
     env = gym.make(CONFIG['game']).unwrapped
 
     RLmethod = WW(CONFIG=CONFIG,
-                  Num_WW=20,
+                  Num_WW=2,
                   limit=10,
                   MNum_seeds=10)
 
     ## train
     train_flag = True
-    train_flag = False
+    # train_flag = False
     if train_flag:
         RLmethod.run()
     else:
