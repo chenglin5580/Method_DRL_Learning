@@ -43,7 +43,8 @@ class ES(object):
             mar = net_r if mar is None else 0.9 * mar + 0.1 * net_r  # moving average reward
             print(
                 'Gen: ', g,
-                '| Net_R: %.1f' % mar,
+                '| net_r: %.1f' % net_r,
+                '| mar: %.1f' % mar,
                 '| Kid_avg_R: %.1f' % kid_rewards.mean(),
                 '| Gen_T: %.2f' % (time.time() - t0), )
             if mar >= CONFIG['eval_threshold']:

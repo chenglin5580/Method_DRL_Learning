@@ -17,7 +17,7 @@ class WW(object):
         self.Num_WW = 20
         self.limit = 10
         self.MNum_seeds = 10
-        self.maxCycle = 1000
+        self.maxCycle = 100
         self.D = 2
         self.ub = np.array([100, 100])
         self.lb = np.array([-100, -100])
