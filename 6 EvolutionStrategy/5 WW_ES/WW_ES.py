@@ -13,13 +13,13 @@ import time
 import copy
 
 class WW(object):
-    def __init__(self, CONFIG, Num_WW=20, limit=10, MNum_seeds=10 ):
+    def __init__(self, CONFIG, Num_WW=20, limit=10, MNum_seeds=10, maxCycle=1000 ):
 
         self.CONFIG = CONFIG
         self.Num_WW = Num_WW
         self.limit = limit
         self.MNum_seeds = MNum_seeds
-        self.maxCycle = 1000
+        self.maxCycle = maxCycle
         self.ub = np.array([100, 100])
         self.lb = np.array([-100, -100])
 
@@ -63,7 +63,7 @@ class WW(object):
     def get_seedNum(self):
         fFitness = np.zeros([self.Num_WW], dtype=np.int32)
         for kk in range(self.Num_WW):
-            fFitness[kk] = self.MNum_seeds - (kk - 1) * (self.MNum_seeds - 1) / (self.Num_WW - 1)
+            fFitness[kk] = self.MNum_seeds - (kk - 0) * (self.MNum_seeds - 0) / (self.Num_WW - 0)
             fFitness[kk] = np.fix(fFitness[kk] + 5.49999999)
         return fFitness
 
@@ -123,7 +123,7 @@ class WW(object):
             # print('iter', iter, 'Globalfit', self.WW_fit_best, 'x_best', self.WW_best)
             print('iter', iter, 'Globalfit', self.WW_fit_best)
 
-        p = self.params_reshape(self.net_shapes, self.WW_best)
+        p = self.params_reshape(self.net_shapes, self.Waterweeds[0])
         np.save("WW_Net/model.npy", p)
 
 
@@ -134,27 +134,27 @@ class WW(object):
 
 
         seed = []
-        seed_fit = []
+        seed_fit = np.zeros([self.seed_num[i_step]])
         for i_seed in range(self.seed_num[i_step]):
 
-            while True:
-                neighbour = int(np.fix(np.random.rand() * (self.Num_WW)))
-                if not (neighbour == i_ww):
-                    break
-            father_WW = self.Waterweeds[neighbour]
+            # while True:
+                # neighbour = int(np.fix(np.random.rand() * (self.Num_WW)))
+                # if not (neighbour == i_ww):
+                #     break
+            # father_WW = self.Waterweeds[neighbour]
 
             temp = mother_WW.copy()
 
             temp += np.random.randn(mother_WW.size) * 0.05
 
             seed.append(temp)
-            seed_fit.append(self.get_reward(self.net_shapes, temp, env, CONFIG['ep_max_step'], CONFIG['continuous_a']))
+            seed_fit[i_seed] = self.get_reward(self.net_shapes, temp, env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
 
         seed_rank = np.argsort(seed_fit)
         cumulative_update = np.zeros_like(mother_WW)  # initialize update values
         utility = self.get_utility(self.seed_num[i_step])
         for ui, k_id in enumerate(seed_rank):
-            cumulative_update += utility[ui] * (seed[k_id] - mother_WW)
+            cumulative_update += utility[ui] * (seed[k_id] - mother_WW)/0.05
 
         gradients = self.optimizer.get_gradients(cumulative_update / (self.seed_num[i_step]*0.05))
         self.Waterweeds[i_ww] += gradients
@@ -206,17 +206,22 @@ if __name__ == "__main__":
     env = gym.make(CONFIG['game']).unwrapped
 
     RLmethod = WW(CONFIG=CONFIG,
-                  Num_WW=2,
+                  Num_WW=1,
                   limit=10,
-                  MNum_seeds=10)
+                  MNum_seeds=10,
+                  maxCycle=100)
 
     ## train
+    T_start = time.time()
     train_flag = True
     # train_flag = False
     if train_flag:
         RLmethod.run()
     else:
         RLmethod.display(CONFIG=CONFIG)
+
+    T = time.time() - T_start
+    print('time_consume', T)
 
 
 
