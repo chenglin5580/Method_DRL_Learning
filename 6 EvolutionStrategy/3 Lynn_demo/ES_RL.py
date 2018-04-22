@@ -137,6 +137,7 @@ class ES(object):
     def sign(self, k_id):
         return -1. if k_id % 2 == 0 else 1.  # mirrored sampling
 
+
     def params_reshape(self, shapes, params):  # reshape to be a matrix
         p, start = [], 0
         for i, shape in enumerate(shapes):  # flat params to matrix
@@ -179,7 +180,7 @@ if __name__ == "__main__":
 
     ## train
     train_flag = True
-    # train_flag = False
+    train_flag = False
     if train_flag:
         RLmethod.run()
     else:

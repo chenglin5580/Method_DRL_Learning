@@ -86,11 +86,11 @@ class WW(object):
     def get_seed(self, shapes, i_ww, Waterweeds, env, ep_max_step, continuous_a):
         # perturb parameters using seed
         mother_WW = self.Waterweeds[i_ww]
-        while True:
-            neighbour = int(np.fix(np.random.rand() * (len(Waterweeds))))
-            if not (neighbour == i_ww):
-                break
-        father_WW = Waterweeds[neighbour]
+        # while True:
+        #     neighbour = int(np.fix(np.random.rand() * (len(Waterweeds))))
+        #     if not (neighbour == i_ww):
+        #         break
+        # father_WW = Waterweeds[neighbour]
         # temp = mother_WW + (father_WW-mother_WW)*(np.random.randn(mother_WW.size)+0.5) * 0.05
         temp = mother_WW + np.random.randn(mother_WW.size) * 0.05
 
@@ -136,7 +136,7 @@ class WW(object):
 
             # print(self.Waterweeds_Fit)
             # print('iter', iter, 'Globalfit', self.WW_fit_best, 'x_best', self.WW_best)
-            print('iter', iter, 'Globalfit', self.WW_fit_best)
+            print('iter', iter, 'Globalfit', self.Waterweeds_Fit)
 
         p = self.params_reshape(self.net_shapes, self.Waterweeds[0])
         np.save("WW_Net/model.npy", p)
@@ -214,10 +214,10 @@ if __name__ == "__main__":
     env = gym.make(CONFIG['game']).unwrapped
 
     RLmethod = WW(CONFIG=CONFIG,
-                  Num_WW=5,
+                  Num_WW=1,
                   limit=10,
-                  MNum_seeds=10,
-                  maxCycle=1000)
+                  MNum_seeds=20,
+                  maxCycle=2000)
 
     ## train
     T_start = time.time()
@@ -230,8 +230,8 @@ if __name__ == "__main__":
 
     T = time.time() - T_start
     print('time_consume', T)
-    # single core, sec 185.1204354763031
-    # multi core, sec 27
+    # single core, 1000代，sec 185.1204354763031
+    # multi core,  1000代，sec 27
 
 
 
