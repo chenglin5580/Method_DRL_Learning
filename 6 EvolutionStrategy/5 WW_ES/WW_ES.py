@@ -22,6 +22,7 @@ class WW(object):
         self.maxCycle = maxCycle
         self.ub = np.array([100, 100])
         self.lb = np.array([-100, -100])
+        self.N_CORE = mp.cpu_count() - 1
 
 
         self.seed_num = self.get_seedNum()
@@ -67,7 +68,6 @@ class WW(object):
             fFitness[kk] = np.fix(fFitness[kk] + 5.49999999)
         return fFitness
 
-
     def get_reward(self, shapes, params, env, ep_max_step, continuous_a):
         # perturb parameters using seed
         p = self.params_reshape(shapes, params)
@@ -83,6 +83,21 @@ class WW(object):
             if done: break
         return -ep_r
 
+    def get_seed(self, shapes, i_ww, Waterweeds, env, ep_max_step, continuous_a):
+        # perturb parameters using seed
+        mother_WW = self.Waterweeds[i_ww]
+        while True:
+            neighbour = int(np.fix(np.random.rand() * (len(Waterweeds))))
+            if not (neighbour == i_ww):
+                break
+        father_WW = Waterweeds[neighbour]
+        # temp = mother_WW + (father_WW-mother_WW)*(np.random.randn(mother_WW.size)+0.5) * 0.05
+        temp = mother_WW + np.random.randn(mother_WW.size) * 0.05
+
+        reward = self.get_reward(shapes, temp, env, ep_max_step, continuous_a)
+
+        return temp-mother_WW, reward
+
     def get_action(self, params, x, continuous_a):
         x = x[np.newaxis, :]
         x = np.tanh(x.dot(params[0]) + params[1])
@@ -91,8 +106,8 @@ class WW(object):
         if not continuous_a[0]:
             return np.argmax(x, axis=1)[0]  # for discrete action
         else:
-            return (self.CONFIG['a_bound'][1]-self.CONFIG['a_bound'][0])/2 * np.tanh(x)[0]+np.mean(self.CONFIG['a_bound'])
-            # return continuous_a[1] * np.tanh(x)[0]  # for continuous action
+            # return (self.CONFIG['a_bound'][1]-self.CONFIG['a_bound'][0])/2 * np.tanh(x)[0]+np.mean(self.CONFIG['a_bound'])
+            return continuous_a[1] * np.tanh(x)[0]  # for continuous action
 
     def params_reshape(self, shapes, params):  # reshape to be a matrix
         p, start = [], 0
@@ -106,12 +121,12 @@ class WW(object):
 
     def run(self):
 
+        pool = mp.Pool(processes=self.N_CORE)
+
         for iter in range(self.maxCycle):
 
-            # self.limit = 10 + iter / self.maxCycle * 30
-
             for i_step in range(self.Num_WW):
-                self.waterweed_update(i_step)
+                self.waterweed_update(i_step, pool)
 
             self.Waterweeds_sort = np.argsort(self.Waterweeds_Fit)
             index_best = self.Waterweeds_sort[0]
@@ -127,34 +142,24 @@ class WW(object):
         np.save("WW_Net/model.npy", p)
 
 
-    def waterweed_update(self, i_step):
+    def waterweed_update(self, i_step, pool):
 
         i_ww = self.Waterweeds_sort[i_step]
-        mother_WW = self.Waterweeds[i_ww]
 
+        jobs = [
+            pool.apply_async(self.get_seed, (self.net_shapes, i_ww, self.Waterweeds, env, CONFIG['ep_max_step'],
+                                               CONFIG['continuous_a'])) for _ in range(self.seed_num[i_step])]
 
-        seed = []
-        seed_fit = np.zeros([self.seed_num[i_step]])
-        for i_seed in range(self.seed_num[i_step]):
+        aaa = [j.get() for j in jobs]
 
-            # while True:
-                # neighbour = int(np.fix(np.random.rand() * (self.Num_WW)))
-                # if not (neighbour == i_ww):
-                #     break
-            # father_WW = self.Waterweeds[neighbour]
-
-            temp = mother_WW.copy()
-
-            temp += np.random.randn(mother_WW.size) * 0.05
-
-            seed.append(temp)
-            seed_fit[i_seed] = self.get_reward(self.net_shapes, temp, env, CONFIG['ep_max_step'], CONFIG['continuous_a'])
+        seed_delta = np.array([aaa[i][0] for i in range(self.seed_num[i_step])])
+        seed_fit = np.array([aaa[i][1] for i in range(self.seed_num[i_step])])
 
         seed_rank = np.argsort(seed_fit)
-        cumulative_update = np.zeros_like(mother_WW)  # initialize update values
+        cumulative_update = np.zeros_like(seed_delta[0])  # initialize update values
         utility = self.get_utility(self.seed_num[i_step])
         for ui, k_id in enumerate(seed_rank):
-            cumulative_update += utility[ui] * (seed[k_id] - mother_WW)/0.05
+            cumulative_update += utility[ui] * (seed_delta[k_id])/0.05
 
         gradients = self.optimizer.get_gradients(cumulative_update / (self.seed_num[i_step]*0.05))
         self.Waterweeds[i_ww] += gradients
@@ -209,7 +214,7 @@ if __name__ == "__main__":
     env = gym.make(CONFIG['game']).unwrapped
 
     RLmethod = WW(CONFIG=CONFIG,
-                  Num_WW=1,
+                  Num_WW=5,
                   limit=10,
                   MNum_seeds=10,
                   maxCycle=1000)
@@ -217,7 +222,7 @@ if __name__ == "__main__":
     ## train
     T_start = time.time()
     train_flag = True
-    # train_flag = False
+    train_flag = False
     if train_flag:
         RLmethod.run()
     else:
@@ -226,6 +231,7 @@ if __name__ == "__main__":
     T = time.time() - T_start
     print('time_consume', T)
     # single core, sec 185.1204354763031
+    # multi core, sec 27
 
 
 
