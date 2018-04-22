@@ -169,11 +169,14 @@ class WW(object):
         p = np.load("WW_Net/model.npy")
         while True:
             s = env.reset()
+            ep_r = 0
             for _ in range(CONFIG['ep_max_step']):
                 env.render()
                 a = self.get_action(p, s, CONFIG['continuous_a'])
-                s, _, done, _ = env.step(a)
+                s, r, done, _ = env.step(a)
+                ep_r += r
                 if done: break
+
 
     def get_utility(self, N_KID):
         base = N_KID  # *2 for mirrored sampling
@@ -209,7 +212,7 @@ if __name__ == "__main__":
                   Num_WW=1,
                   limit=10,
                   MNum_seeds=10,
-                  maxCycle=100)
+                  maxCycle=1000)
 
     ## train
     T_start = time.time()
@@ -222,6 +225,7 @@ if __name__ == "__main__":
 
     T = time.time() - T_start
     print('time_consume', T)
+    # single core, sec 185.1204354763031
 
 
 
